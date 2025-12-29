@@ -3,8 +3,8 @@ import { Form, Field, Formik, ErrorMessage } from "formik";
 import type { FormikHelpers } from "formik";
 import * as Yup from "yup";
 import { useId } from 'react';
-import { createNote } from "../../services/noteService";
-import type { CreateNoteProps } from "../../services/noteService";
+import { createNote, type CreateNoteProps } from "../../services/noteService";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface NoteFormValues {
     title: string;
@@ -19,8 +19,7 @@ const noteFormValues: NoteFormValues = {
 };
   
 interface NoteFormProps {
-    onCancel: () => void;
-    onSubmit: (data: CreateNoteProps) => void;
+    setIsModalOpen: (x: boolean) => void
 }
 
 const validationSchema = Yup.object().shape({
@@ -35,15 +34,23 @@ const validationSchema = Yup.object().shape({
         .required('Tag is required'),
 });
 
-export default function NoteForm({ onCancel }: NoteFormProps) {
-
+export default function NoteForm({ setIsModalOpen }: NoteFormProps) {
+    const queryClient = useQueryClient();
     const fieldId = useId();
+
+    const createNoteMutation = useMutation({
+        mutationFn: (data: CreateNoteProps) => createNote(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["notes"] });
+            setIsModalOpen(false);
+        }
+    });
 
     const handleSubmit = async (values: NoteFormValues, actions: FormikHelpers<NoteFormValues>) => {
         try {
-            await createNote(values);
+            await createNoteMutation.mutate(values);
             actions.resetForm();
-            onCancel();
+            setIsModalOpen(false);
         } finally {
             actions.setSubmitting(false);
         }
@@ -84,7 +91,7 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
                     </div>
 
                     <div className={css.actions}>
-                        <button type="button" className={css.cancelButton} onClick={onCancel}>
+                        <button type="button" className={css.cancelButton} onClick={() => setIsModalOpen(false)}>
                             Cancel
                         </button>
                         <button
