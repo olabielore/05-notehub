@@ -46,14 +46,13 @@ export default function NoteForm({ setIsModalOpen }: NoteFormProps) {
         }
     });
 
-    const handleSubmit = async (values: NoteFormValues, actions: FormikHelpers<NoteFormValues>) => {
-        try {
-            await createNoteMutation.mutate(values);
-            actions.resetForm();
-            setIsModalOpen(false);
-        } finally {
-            actions.setSubmitting(false);
-        }
+    const handleSubmit = (values: NoteFormValues, actions: FormikHelpers<NoteFormValues>) => {
+        createNoteMutation.mutate(values, {
+            onSettled: () => {
+                actions.setSubmitting(false);
+                actions.resetForm();
+            },
+        });
     };
 
     return (
